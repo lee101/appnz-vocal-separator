@@ -1,0 +1,12 @@
+build:
+  gpu: true
+  cuda: "12.8"
+  python_version: "3.11"
+  sdk_version: "0.21.0"
+  python_requirements: requirements.txt
+  system_packages:
+    - ffmpeg
+  run:
+    - python -c "from demucs.pretrained import get_model; get_model('htdemucs')"
+image: ghcr.io/lee101/appnz-vocal-separator:latest
+run: "predict.py:Runner"
