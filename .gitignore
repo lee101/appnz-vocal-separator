@@ -1,6 +1,6 @@
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
-models/
-*.mp3
-*.wav
+.cog/
+separated/
+*.zip

@@ -1,0 +1,9 @@
+{
+  "outputKind": "file",
+  "inputs": [
+    {"name": "audio", "type": "audio", "description": "Input song", "required": true, "order": 0},
+    {"name": "stems", "type": "string", "description": "Two stems (vocals/instrumental) or all four", "default": "two", "choices": ["two", "four"], "order": 1},
+    {"name": "format", "type": "string", "description": "Stem audio format", "default": "mp3", "choices": ["mp3", "wav"], "order": 2},
+    {"name": "model", "type": "string", "description": "Demucs checkpoint", "default": "htdemucs", "choices": ["htdemucs", "htdemucs_ft", "mdx_extra"], "order": 3}
+  ]
+}

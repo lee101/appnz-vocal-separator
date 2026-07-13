@@ -1,53 +1,46 @@
 # appnz-vocal-separator
 
-[![Deploy to app.nz](https://app.nz/deploy-button.svg)](https://app.nz/deploy?image=ghcr.io/lee101/appnz-vocal-separator:latest&name=vocal-separator&vram=8)
+[![Deploy to app.nz](https://app.nz/deploy-button.svg)](https://app.nz/deploy?image=ghcr.io/lee101/appnz-vocal-separator:latest&name=vocal-separator&hardware=gpu-rtx3090)
 
-Music source separation with [Demucs](https://github.com/facebookresearch/demucs)
-(htdemucs) packaged as an [app.nz cog](https://app.nz): a tiny HTTP contract on
-port 5000 with `POST /predictions` in and MP3 stems out as data URIs. Runs on
-CPU; automatically uses CUDA when a GPU is present. Model weights are baked
-into the image so cold starts are fast.
+A GPU-ready [Cog](https://github.com/replicate/cog) wrapper around
+[Demucs](https://github.com/facebookresearch/demucs). It returns a ZIP with
+either vocals + instrumental or the full drums/bass/vocals/other stem set. The
+default `htdemucs` checkpoint is cached into the image for predictable cold
+starts.
 
-## Inputs
-
-| name | type | notes |
-|---|---|---|
-| `audio` | audio | https URL or `data:` URI of the track |
-| `stems` | enum | `two` (default) = vocals + instrumental, `four` = vocals/drums/bass/other |
-
-Output: JSON dict of stem name to `data:audio/mpeg;base64,...` MP3.
-
-## Run locally
+## Run on your own GPU
 
 ```bash
-docker run -p 5000:5000 ghcr.io/lee101/appnz-vocal-separator:latest
-
-curl -s http://localhost:5000/health-check
-
-curl -s http://localhost:5000/predictions -X POST \
-  -H 'Content-Type: application/json' \
-  -d '{"input": {"audio": "https://example.com/song.mp3", "stems": "two"}}'
-
-curl -s http://localhost:5000/predictions -X POST \
-  -H 'Content-Type: application/json' \
-  -d '{"input": {"audio": "https://example.com/song.mp3", "stems": "four"}}' \
-  | python3 -c 'import sys,json,base64; o=json.load(sys.stdin)["output"]; [open(k+".mp3","wb").write(base64.b64decode(v.split(",",1)[1])) for k,v in o.items()]'
+cog run -i audio=@song.wav -i stems=two -i format=mp3 -o stems.zip
+cog run -i audio=@song.wav -i stems=four -i format=wav -o stems.zip
 ```
 
-## One-click deploy on app.nz
-
-Click the badge above, or open
-`https://app.nz/deploy?image=ghcr.io/lee101/appnz-vocal-separator:latest&name=vocal-separator&vram=8`.
-
-## Build
+The CUDA 12.8 / PyTorch 2.7 build supports Ampere, Ada, and Blackwell. CPU is a
+functional fallback but is much slower for full-length songs.
 
 ```bash
-docker build -t ghcr.io/lee101/appnz-vocal-separator:latest .
+cog build -t appnz-vocal-separator
+docker run --rm --gpus all -p 5000:5000 appnz-vocal-separator
 ```
 
-GitHub Actions builds and pushes `ghcr.io/lee101/appnz-vocal-separator:latest`
-on every push to `main`.
+## Scale-to-zero Cog + subdomain
 
-## License
+```bash
+app cogs deploy vocal-separator
+app apps deploy demo --app stems-demo
+app apps open stems-demo
+```
 
-MIT
+This serves the static frontend at `https://stems-demo.app.nz` while the model
+container scales independently. Change the demo manifest name for a custom
+subdomain.
+
+## Test
+
+```bash
+python -m unittest discover -s tests -v
+python -m json.tool appnz.schema.json >/dev/null
+```
+
+The adapter and Demucs are MIT licensed. See [THIRD_PARTY.md](THIRD_PARTY.md)
+for dependency and weight provenance.
